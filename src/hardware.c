@@ -623,7 +623,7 @@ void hw_config_cback(void *p_mem)
 
                 p_buf->len = HCI_CMD_PREAMBLE_SIZE;
                 hw_cfg_cb.state = HW_CFG_READ_LOCAL_NAME;
-
+                ms_delay(50);
                 is_proceeding = bt_vendor_cbacks->xmit_cb(HCI_READ_LOCAL_NAME, \
                                                     p_buf, hw_config_cback);
                 break;
