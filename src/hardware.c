@@ -48,7 +48,6 @@
 /******************************************************************************
 **  Constants & Macros
 ******************************************************************************/
-
 #ifndef BTHW_DBG
 #define BTHW_DBG FALSE
 #endif
@@ -623,12 +622,13 @@ void hw_config_cback(void *p_mem)
 
                 p_buf->len = HCI_CMD_PREAMBLE_SIZE;
                 hw_cfg_cb.state = HW_CFG_READ_LOCAL_NAME;
-                ms_delay(50);
+                ms_delay(100);
                 is_proceeding = bt_vendor_cbacks->xmit_cb(HCI_READ_LOCAL_NAME, \
                                                     p_buf, hw_config_cback);
                 break;
 
             case HW_CFG_READ_LOCAL_NAME:
+                ALOGI("bt vendor lib: read local name");
                 p_tmp = p_name = (char *) (p_evt_buf + 1) + \
                          HCI_EVT_CMD_CMPL_LOCAL_NAME_STRING;
 
@@ -665,6 +665,7 @@ void hw_config_cback(void *p_mem)
 
                         p_buf->len = HCI_CMD_PREAMBLE_SIZE;
                         hw_cfg_cb.state = HW_CFG_DL_MINIDRIVER;
+                        ms_delay(50);
 
                         is_proceeding = bt_vendor_cbacks->xmit_cb( \
                                             HCI_VSC_DOWNLOAD_MINIDRV, p_buf, \
@@ -685,11 +686,13 @@ void hw_config_cback(void *p_mem)
                 break;
 
             case HW_CFG_DL_MINIDRIVER:
+                ALOGI("bt vendor lib: dowmload minidriver");
                 /* give time for placing firmware in download mode */
-                ms_delay(50);
+                ms_delay(100);
                 hw_cfg_cb.state = HW_CFG_DL_FW_PATCH;
                 /* fall through intentionally */
             case HW_CFG_DL_FW_PATCH:
+                //ALOGI("bt vendor lib: download fw");
                 p_buf->len = read(hw_cfg_cb.fw_fd, p, HCI_CMD_PREAMBLE_SIZE);
                 if (p_buf->len > 0)
                 {
