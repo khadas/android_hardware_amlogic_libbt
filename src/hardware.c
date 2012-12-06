@@ -622,7 +622,7 @@ void hw_config_cback(void *p_mem)
 
                 p_buf->len = HCI_CMD_PREAMBLE_SIZE;
                 hw_cfg_cb.state = HW_CFG_READ_LOCAL_NAME;
-                ms_delay(100);
+                ms_delay(10);
                 is_proceeding = bt_vendor_cbacks->xmit_cb(HCI_READ_LOCAL_NAME, \
                                                     p_buf, hw_config_cback);
                 break;
@@ -686,7 +686,7 @@ void hw_config_cback(void *p_mem)
                 break;
 
             case HW_CFG_DL_MINIDRIVER:
-                ALOGI("bt vendor lib: dowmload minidriver");
+                ALOGI("bt vendor lib: download minidriver");
                 /* give time for placing firmware in download mode */
                 ms_delay(100);
                 hw_cfg_cb.state = HW_CFG_DL_FW_PATCH;
@@ -774,7 +774,7 @@ void hw_config_cback(void *p_mem)
                 userial_vendor_set_baud( \
                     line_speed_to_userial_baud(UART_TARGET_BAUD_RATE) \
                 );
-
+                ms_delay(10);
 #if (USE_CONTROLLER_BDADDR == TRUE)
                 if ((is_proceeding = hw_config_read_bdaddr(p_buf)) == TRUE)
                     break;
