@@ -1,6 +1,10 @@
 intermediates := $(local-intermediates-dir)
 
+ifeq ($(BCM_BLUETOOTH_LPM_ENABLE),true)
+SRC := $(call my-dir)/include/vnd_40183_lpm.txt
+else
 SRC := $(call my-dir)/include/vnd_40183.txt
+endif
 ifeq (,$(wildcard $(SRC)))
 # configuration file does not exist. Use default one
 SRC := $(call my-dir)/include/vnd_generic.txt
