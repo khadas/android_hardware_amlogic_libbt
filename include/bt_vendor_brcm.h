@@ -283,22 +283,22 @@
     4 : 2048K
 */
 #ifndef SCO_PCM_IF_CLOCK_RATE
-#define SCO_PCM_IF_CLOCK_RATE           4
+#define SCO_PCM_IF_CLOCK_RATE           0
 #endif
 
 /* SCO_PCM_IF_FRAME_TYPE - 0=Short, 1=Long */
 #ifndef SCO_PCM_IF_FRAME_TYPE
-#define SCO_PCM_IF_FRAME_TYPE           0
+#define SCO_PCM_IF_FRAME_TYPE           1
 #endif
 
 /* SCO_PCM_IF_SYNC_MODE - 0=Slave, 1=Master */
 #ifndef SCO_PCM_IF_SYNC_MODE
-#define SCO_PCM_IF_SYNC_MODE            0
+#define SCO_PCM_IF_SYNC_MODE            1
 #endif
 
 /* SCO_PCM_IF_CLOCK_MODE - 0=Slave, 1=Master */
 #ifndef SCO_PCM_IF_CLOCK_MODE
-#define SCO_PCM_IF_CLOCK_MODE           0
+#define SCO_PCM_IF_CLOCK_MODE           1
 #endif
 
 #define PCM_DATA_FORMAT_PARAM_SIZE      5
@@ -318,7 +318,7 @@
     if Fill_Method is set to programmable
 */
 #ifndef PCM_DATA_FMT_FILL_BITS
-#define PCM_DATA_FMT_FILL_BITS          0
+#define PCM_DATA_FMT_FILL_BITS          3
 #endif
 
 /* PCM_DATA_FMT_FILL_METHOD
@@ -337,7 +337,7 @@
     Specifies the number of bits to be filled
 */
 #ifndef PCM_DATA_FMT_FILL_NUM
-#define PCM_DATA_FMT_FILL_NUM           3
+#define PCM_DATA_FMT_FILL_NUM           0
 #endif
 
 /* PCM_DATA_FMT_JUSTIFY_MODE
