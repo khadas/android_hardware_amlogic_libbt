@@ -51,6 +51,10 @@
 
 #define VND_PORT_NAME_MAXLEN    256
 
+#if (BT_WAKE_VIA_PROC == TRUE)
+#define TIOCSETBTPORT 0x5489
+#define TIOCCLRBTPORT 0x5490
+#endif
 /******************************************************************************
 **  Local type definitions
 ******************************************************************************/
@@ -253,6 +257,10 @@ int userial_vendor_open(tUSERIAL_CFG *p_cfg)
 #if (BT_WAKE_VIA_USERIAL_IOCTL==TRUE)
     userial_ioctl_init_bt_wake(vnd_userial.fd);
 #endif
+#if (BT_WAKE_VIA_PROC == TRUE)
+	/* set bluesleep uart port */
+    ioctl(vnd_userial.fd, TIOCSETBTPORT, NULL);
+#endif
 
     ALOGI("device fd = %d open", vnd_userial.fd);
 
@@ -279,7 +287,9 @@ void userial_vendor_close(void)
     /* de-assert bt_wake BEFORE closing port */
     ioctl(vnd_userial.fd, USERIAL_IOCTL_BT_WAKE_DEASSERT, NULL);
 #endif
-
+#if (BT_WAKE_VIA_PROC == TRUE)
+    ioctl(vnd_userial.fd, TIOCCLRBTPORT, NULL);
+#endif
     ALOGI("device fd = %d close", vnd_userial.fd);
 
     if ((result = close(vnd_userial.fd)) < 0)
