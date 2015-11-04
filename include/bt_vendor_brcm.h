@@ -56,16 +56,16 @@
 
 /* Device port name where Bluetooth controller attached */
 #ifndef BLUETOOTH_UART_DEVICE_PORT
-#define BLUETOOTH_UART_DEVICE_PORT      "/dev/ttyS1"    /* maguro */
+#define BLUETOOTH_UART_DEVICE_PORT      "/dev/ttyO1"    /* maguro */
 #endif
 
 /* Location of firmware patch files */
 #ifndef FW_PATCHFILE_LOCATION
-#define FW_PATCHFILE_LOCATION "/etc/bluetooth/"  /* maguro */
+#define FW_PATCHFILE_LOCATION "/vendor/firmware/"  /* maguro */
 #endif
 
 #ifndef UART_TARGET_BAUD_RATE
-#define UART_TARGET_BAUD_RATE           2000000
+#define UART_TARGET_BAUD_RATE           3000000
 #endif
 
 /* The millisecond delay pauses on HCI transport after firmware patches
@@ -79,7 +79,7 @@
  * baud.
  */
 #ifndef FW_PATCH_SETTLEMENT_DELAY_MS
-#define FW_PATCH_SETTLEMENT_DELAY_MS          200
+#define FW_PATCH_SETTLEMENT_DELAY_MS          0
 #endif
 
 /* The Bluetooth Device Aaddress source switch:
@@ -106,7 +106,7 @@
     1: UART with Host wake/BT wake out of band signals
 */
 #ifndef LPM_SLEEP_MODE
-#define LPM_SLEEP_MODE                  0
+#define LPM_SLEEP_MODE                  1
 #endif
 
 /* Host Stack Idle Threshold in 300ms or 25ms 
@@ -202,12 +202,32 @@
 #define BT_WAKE_VIA_USERIAL_IOCTL       FALSE
 #endif
 
+/* BT_WAKE_USERIAL_LDISC
+
+    Use line discipline if the BT_WAKE control is in line discipline
+*/
+#ifndef BT_WAKE_USERIAL_LDISC
+#define BT_WAKE_USERIAL_LDISC           FALSE
+#endif
+
 /* BT_WAKE_VIA_PROC
-    
+
     LPM & BT_WAKE control through PROC nodes
- */
+*/
 #ifndef BT_WAKE_VIA_PROC
 #define BT_WAKE_VIA_PROC       FALSE
+#endif
+
+#ifndef BT_WAKE_VIA_PROC_NOTIFY_DEASSERT
+#define  BT_WAKE_VIA_PROC_NOTIFY_DEASSERT       FALSE
+#endif
+
+/* N_BRCM_HCI
+
+    UART ioctl line discipline
+*/
+#ifndef N_BRCM_HCI
+#define N_BRCM_HCI             25
 #endif
 
 /* SCO_CFG_INCLUDED
@@ -224,8 +244,21 @@
 #define SCO_USE_I2S_INTERFACE           FALSE
 #endif
 
-#if (SCO_USE_I2S_INTERFACE == TRUE)
 #define SCO_I2SPCM_PARAM_SIZE           4
+
+/* SCO_WBS_SAMPLE_RATE
+    0 : 8K
+    1 : 16K
+    2 : 4K
+ This macro is used for setting WBS sampling rate for a SCO connection
+ If the mobile network supports WBS, we need to use 16KHz as default
+ but if the platform doesn't support 16KHz, the sample rate can be
+ overriden to 8KHz by setting this to 0.
+*/
+#ifndef SCO_WBS_SAMPLE_RATE
+#define SCO_WBS_SAMPLE_RATE            1
+#endif
+
 
 /* SCO_I2SPCM_IF_MODE - 0=Disable, 1=Enable */
 #ifndef SCO_I2SPCM_IF_MODE
@@ -258,7 +291,18 @@
 #ifndef SCO_I2SPCM_IF_CLOCK_RATE
 #define SCO_I2SPCM_IF_CLOCK_RATE        1
 #endif
-#endif // SCO_USE_I2S_INTERFACE
+
+/* SCO_I2SPCM_IF_CLOCK_RATE4WBS
+
+    0 : 128K
+    1 : 256K
+    2 : 512K
+    3 : 1024K
+    4 : 2048K
+*/
+#ifndef SCO_I2SPCM_IF_CLOCK_RATE4WBS
+#define SCO_I2SPCM_IF_CLOCK_RATE4WBS        2
+#endif
 
 
 #define SCO_PCM_PARAM_SIZE              5
@@ -276,6 +320,8 @@
 
 /* SCO_PCM_IF_CLOCK_RATE
 
+    NOTICE: suggested to be consistent with SCO_I2SPCM_IF_CLOCK_RATE
+
     0 : 128K
     1 : 256K
     2 : 512K
@@ -283,22 +329,35 @@
     4 : 2048K
 */
 #ifndef SCO_PCM_IF_CLOCK_RATE
-#define SCO_PCM_IF_CLOCK_RATE           0
+#define SCO_PCM_IF_CLOCK_RATE           4
 #endif
 
 /* SCO_PCM_IF_FRAME_TYPE - 0=Short, 1=Long */
 #ifndef SCO_PCM_IF_FRAME_TYPE
-#define SCO_PCM_IF_FRAME_TYPE           1
+#define SCO_PCM_IF_FRAME_TYPE           0
 #endif
 
-/* SCO_PCM_IF_SYNC_MODE - 0=Slave, 1=Master */
+/* SCO_PCM_IF_SYNC_MODE
+
+    NOTICE: in most usage cases the value will be the same as
+            SCO_PCM_IF_CLOCK_MODE setting
+
+    0 : Slave
+    1 : Master
+*/
 #ifndef SCO_PCM_IF_SYNC_MODE
-#define SCO_PCM_IF_SYNC_MODE            1
+#define SCO_PCM_IF_SYNC_MODE            0
 #endif
 
-/* SCO_PCM_IF_CLOCK_MODE - 0=Slave, 1=Master */
+/* SCO_PCM_IF_CLOCK_MODE
+
+    NOTICE: suggested to be consistent with SCO_I2SPCM_IF_ROLE
+
+    0 : Slave
+    1 : Master
+*/
 #ifndef SCO_PCM_IF_CLOCK_MODE
-#define SCO_PCM_IF_CLOCK_MODE           1
+#define SCO_PCM_IF_CLOCK_MODE           0
 #endif
 
 #define PCM_DATA_FORMAT_PARAM_SIZE      5
@@ -318,7 +377,7 @@
     if Fill_Method is set to programmable
 */
 #ifndef PCM_DATA_FMT_FILL_BITS
-#define PCM_DATA_FMT_FILL_BITS          3
+#define PCM_DATA_FMT_FILL_BITS          0
 #endif
 
 /* PCM_DATA_FMT_FILL_METHOD
@@ -349,11 +408,23 @@
 #define PCM_DATA_FMT_JUSTIFY_MODE       0
 #endif
 
+/* HW_END_WITH_HCI_RESET
+
+    Sample code implementation of sending a HCI_RESET command during the epilog
+    process. It calls back to the callers after command complete of HCI_RESET
+    is received.
+*/
+#ifndef HW_END_WITH_HCI_RESET
+#define HW_END_WITH_HCI_RESET    TRUE
+#endif
+
 /******************************************************************************
 **  Extern variables and functions
 ******************************************************************************/
 
 extern bt_vendor_callbacks_t *bt_vendor_cbacks;
+
+extern int hw_set_audio_state(bt_vendor_op_audio_state_t *p_state);
 
 #endif /* BT_VENDOR_BRCM_H */
 

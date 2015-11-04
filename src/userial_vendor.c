@@ -31,6 +31,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <stdio.h>
+#include <string.h>
 #include "bt_vendor_brcm.h"
 #include "userial.h"
 #include "userial_vendor.h"
@@ -51,10 +52,6 @@
 
 #define VND_PORT_NAME_MAXLEN    256
 
-#if (BT_WAKE_VIA_PROC == TRUE)
-#define TIOCSETBTPORT 0x5489
-#define TIOCCLRBTPORT 0x5490
-#endif
 /******************************************************************************
 **  Local type definitions
 ******************************************************************************/
@@ -140,6 +137,19 @@ uint8_t userial_to_tcio_baud(uint8_t cfg_baud, uint32_t *baud)
 void userial_ioctl_init_bt_wake(int fd)
 {
     uint32_t bt_wake_state;
+
+#if (BT_WAKE_USERIAL_LDISC==TRUE)
+    int ldisc = N_BRCM_HCI; /* brcm sleep mode support line discipline */
+
+    /* attempt to load enable discipline driver */
+    if (ioctl(vnd_userial.fd, TIOCSETD, &ldisc) < 0)
+    {
+        VNDUSERIALDBG("USERIAL_Open():fd %d, TIOCSETD failed: error %d for ldisc: %d",
+                      fd, errno, ldisc);
+    }
+#endif
+
+
 
     /* assert BT_WAKE through ioctl */
     ioctl(fd, USERIAL_IOCTL_BT_WAKE_ASSERT, NULL);
@@ -257,10 +267,6 @@ int userial_vendor_open(tUSERIAL_CFG *p_cfg)
 #if (BT_WAKE_VIA_USERIAL_IOCTL==TRUE)
     userial_ioctl_init_bt_wake(vnd_userial.fd);
 #endif
-#if (BT_WAKE_VIA_PROC == TRUE)
-	/* set bluesleep uart port */
-    ioctl(vnd_userial.fd, TIOCSETBTPORT, NULL);
-#endif
 
     ALOGI("device fd = %d open", vnd_userial.fd);
 
@@ -287,11 +293,10 @@ void userial_vendor_close(void)
     /* de-assert bt_wake BEFORE closing port */
     ioctl(vnd_userial.fd, USERIAL_IOCTL_BT_WAKE_DEASSERT, NULL);
 #endif
-#if (BT_WAKE_VIA_PROC == TRUE)
-    ioctl(vnd_userial.fd, TIOCCLRBTPORT, NULL);
-#endif
-    ALOGI("device fd = %d close", vnd_userial.fd);
 
+    ALOGI("device fd = %d close", vnd_userial.fd);
+    // flush Tx before close to make sure no chars in buffer
+    tcflush(vnd_userial.fd, TCIOFLUSH);
     if ((result = close(vnd_userial.fd)) < 0)
         ALOGE( "close(fd:%d) FAILED result:%d", vnd_userial.fd, result);
 

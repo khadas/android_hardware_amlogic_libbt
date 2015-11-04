@@ -27,6 +27,7 @@
 #define LOG_TAG "bt_vendor"
 
 #include <utils/Log.h>
+#include <string.h>
 #include "bt_vendor_brcm.h"
 #include "upio.h"
 #include "userial_vendor.h"
@@ -53,6 +54,9 @@ void hw_lpm_set_wake_state(uint8_t wake_assert);
 void hw_sco_config(void);
 #endif
 void vnd_load_conf(const char *p_path);
+#if (HW_END_WITH_HCI_RESET == TRUE)
+void hw_epilog_process(void);
+#endif
 
 /******************************************************************************
 **  Variables
@@ -201,6 +205,25 @@ static int op(bt_vendor_opcode_t opcode, void *param)
                                         TRUE : FALSE;
 
                 hw_lpm_set_wake_state(wake_assert);
+            }
+            break;
+
+         case BT_VND_OP_SET_AUDIO_STATE:
+            {
+                retval = hw_set_audio_state((bt_vendor_op_audio_state_t *)param);
+            }
+            break;
+
+        case BT_VND_OP_EPILOG:
+            {
+#if (HW_END_WITH_HCI_RESET == FALSE)
+                if (bt_vendor_cbacks)
+                {
+                    bt_vendor_cbacks->epilog_cb(BT_VND_OP_RESULT_SUCCESS);
+                }
+#else
+                hw_epilog_process();
+#endif
             }
             break;
     }

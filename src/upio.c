@@ -31,6 +31,7 @@
 #include <utils/Log.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <string.h>
 #include <cutils/properties.h>
 #include "bt_vendor_brcm.h"
 #include "upio.h"
@@ -194,6 +195,40 @@ static void proc_btwrite_timeout(union sigval arg)
 {
     UPIODBG("..%s..", __FUNCTION__);
     lpm_proc_cb.btwrite_active = FALSE;
+    /* drive LPM down; this timer should fire only when BT is awake; */
+    upio_set(UPIO_BT_WAKE, UPIO_DEASSERT, 1);
+}
+
+/******************************************************************************
+ **
+ ** Function      upio_start_stop_timer
+ **
+ ** Description   Arm user space timer in case lpm is left asserted
+ **
+ ** Returns       None
+ **
+ *****************************************************************************/
+void upio_start_stop_timer(int action) {
+    struct itimerspec ts;
+
+    if (action == UPIO_ASSERT) {
+        lpm_proc_cb.btwrite_active = TRUE;
+        if (lpm_proc_cb.timer_created == TRUE) {
+            ts.it_value.tv_sec = PROC_BTWRITE_TIMER_TIMEOUT_MS/1000;
+            ts.it_value.tv_nsec = 1000000*(PROC_BTWRITE_TIMER_TIMEOUT_MS%1000);
+            ts.it_interval.tv_sec = 0;
+            ts.it_interval.tv_nsec = 0;
+        }
+    } else {
+        /* unarm timer if writing 0 to lpm; reduce unnecessary user space wakeup */
+        memset(&ts, 0, sizeof(ts));
+    }
+
+    if (timer_settime(lpm_proc_cb.timer_id, 0, &ts, 0) == 0) {
+        UPIODBG("%s : timer_settime success", __FUNCTION__);
+    } else {
+        UPIODBG("%s : timer_settime failed", __FUNCTION__);
+    }
 }
 #endif
 
@@ -330,6 +365,8 @@ void upio_set(uint8_t pio, uint8_t action, uint8_t polarity)
     char buffer;
 #endif
 
+    UPIODBG("%s : pio %d action %d, polarity %d", __FUNCTION__, pio, action, polarity);
+
     switch (pio)
     {
         case UPIO_LPM_MODE:
@@ -353,12 +390,10 @@ void upio_set(uint8_t pio, uint8_t action, uint8_t polarity)
 
             if (action == UPIO_ASSERT)
             {
-                UPIODBG("LPM asserted");
                 buffer = '1';
             }
             else
             {
-                UPIODBG("LPM deasserted");
                 buffer = '0';
 
                 // delete btwrite assertion holding timer
@@ -374,6 +409,7 @@ void upio_set(uint8_t pio, uint8_t action, uint8_t polarity)
                 ALOGE("upio_set : write(%s) failed: %s (%d)",
                         VENDOR_LPM_PROC_NODE, strerror(errno),errno);
             }
+#if (PROC_BTWRITE_TIMER_TIMEOUT_MS != 0)
             else
             {
                 if (action == UPIO_ASSERT)
@@ -397,6 +433,7 @@ void upio_set(uint8_t pio, uint8_t action, uint8_t polarity)
                     }
                 }
             }
+#endif
 
             if (fd >= 0)
                 close(fd);
@@ -404,7 +441,6 @@ void upio_set(uint8_t pio, uint8_t action, uint8_t polarity)
             break;
 
         case UPIO_BT_WAKE:
-
             if (upio_state[UPIO_BT_WAKE] == action)
             {
                 UPIODBG("BT_WAKE is %s already", lpm_state[action]);
@@ -420,22 +456,16 @@ void upio_set(uint8_t pio, uint8_t action, uint8_t polarity)
                      * a 10sec internal in-activity timeout timer before it
                      * attempts to deassert BT_WAKE line.
                      */
-#endif
+                    return;
+#else
                 return;
+#endif
             }
 
             upio_state[UPIO_BT_WAKE] = action;
 
-            /****************************************
-             * !!! TODO !!!
-             *
-             * === Custom Porting Required ===
-             *
-             * Platform dependent user-to-kernel
-             * interface is required to set output
-             * state of physical BT_WAKE pin.
-             ****************************************/
 #if (BT_WAKE_VIA_USERIAL_IOCTL == TRUE)
+
             userial_vendor_ioctl( ( (action==UPIO_ASSERT) ? \
                       USERIAL_OP_ASSERT_BT_WAKE : USERIAL_OP_DEASSERT_BT_WAKE),\
                       NULL);
@@ -445,12 +475,10 @@ void upio_set(uint8_t pio, uint8_t action, uint8_t polarity)
             /*
              *  Kick proc btwrite node only at UPIO_ASSERT
              */
+#if (BT_WAKE_VIA_PROC_NOTIFY_DEASSERT == FALSE)
             if (action == UPIO_DEASSERT)
-            {
-                UPIODBG("btwake deassertion");
                 return;
-            }
-
+#endif
             fd = open(VENDOR_BTWRITE_PROC_NODE, O_WRONLY);
 
             if (fd < 0)
@@ -459,36 +487,33 @@ void upio_set(uint8_t pio, uint8_t action, uint8_t polarity)
                         VENDOR_BTWRITE_PROC_NODE, strerror(errno), errno);
                 return;
             }
-
-            buffer = '1';
+#if (BT_WAKE_VIA_PROC_NOTIFY_DEASSERT == TRUE)
+            if (action == UPIO_DEASSERT)
+                buffer = '0';
+            else
+#endif
+                buffer = '1';
 
             if (write(fd, &buffer, 1) < 0)
             {
                 ALOGE("upio_set : write(%s) failed: %s (%d)",
                         VENDOR_BTWRITE_PROC_NODE, strerror(errno),errno);
             }
+#if (PROC_BTWRITE_TIMER_TIMEOUT_MS != 0)
             else
             {
-                lpm_proc_cb.btwrite_active = TRUE;
-
-                if (lpm_proc_cb.timer_created == TRUE)
-                {
-                    struct itimerspec ts;
-
-                    ts.it_value.tv_sec = PROC_BTWRITE_TIMER_TIMEOUT_MS/1000;
-                    ts.it_value.tv_nsec = 1000*(PROC_BTWRITE_TIMER_TIMEOUT_MS%1000);
-                    ts.it_interval.tv_sec = 0;
-                    ts.it_interval.tv_nsec = 0;
-
-                    timer_settime(lpm_proc_cb.timer_id, 0, &ts, 0);
-                }
+                /* arm user space timer based on action */
+                upio_start_stop_timer(action);
             }
-            //ms_delay(10);
-            UPIODBG("proc btwrite assertion");
+#endif
+
+            UPIODBG("%s: proc btwrite assertion, buffer: %c, timer_armed %d %d",
+                    __FUNCTION__, buffer, lpm_proc_cb.btwrite_active, lpm_proc_cb.timer_created);
 
             if (fd >= 0)
                 close(fd);
 #endif
+
             break;
 
         case UPIO_HOST_WAKE:
