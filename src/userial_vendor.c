@@ -195,6 +195,7 @@ int userial_vendor_open(tUSERIAL_CFG *p_cfg)
     uint8_t data_bits;
     uint16_t parity;
     uint8_t stop_bits;
+    uint8_t cnt = 0;
 
     vnd_userial.fd = -1;
 
@@ -240,12 +241,18 @@ int userial_vendor_open(tUSERIAL_CFG *p_cfg)
     }
 
     ALOGI("userial vendor open: opening %s", vnd_userial.port_name);
-
-    if ((vnd_userial.fd = open(vnd_userial.port_name, O_RDWR)) == -1)
+open_retry:
+    if ((vnd_userial.fd = open(vnd_userial.port_name, O_RDWR)) < 0)
     {
-        ALOGE("userial vendor open: unable to open %s", vnd_userial.port_name);
+        ALOGE("userial vendor open: unable to open %s, retrying....", vnd_userial.port_name);
+        usleep(50000);
+        cnt++;
+        if (cnt < 40)
+            goto open_retry;
+        ALOGE("userial vendor open fail!!");
         return -1;
     }
+    ALOGE("userial vendor open success!!");
 
     tcflush(vnd_userial.fd, TCIOFLUSH);
 
