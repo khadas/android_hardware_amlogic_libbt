@@ -36,7 +36,7 @@
 #include "bt_vendor_brcm.h"
 #include "upio.h"
 #include "userial_vendor.h"
-
+#include "sysbridge.h"
 /******************************************************************************
 **  Constants & Macros
 ******************************************************************************/
@@ -148,29 +148,39 @@ static int init_rfkill()
     char path[64];
     char buf[16];
     int fd, sz, id;
-
+    sz = -1;//initial
     if (is_rfkill_disabled())
         return -1;
 
     for (id = 0; ; id++)
     {
+
         snprintf(path, sizeof(path), "/sys/class/rfkill/rfkill%d/type", id);
         fd = open(path, O_RDONLY);
         if (fd < 0)
         {
             ALOGE("init_rfkill : open(%s) failed: %s (%d)\n", \
                  path, strerror(errno), errno);
-            return -1;
+            ALOGE("open failed,use syscontrol\n");
+            sz = amSystemWriteGetProperty(path,&buf);
+            goto end;
+            //return -1;
         }
 
         sz = read(fd, &buf, sizeof(buf));
         close(fd);
-
-        if (sz >= 9 && memcmp(buf, "bluetooth", 9) == 0)
-        {
-            rfkill_id = id;
-            break;
-        }
+        end:if (sz >= 9 && memcmp(buf, "bluetooth", 9) == 0)
+            {
+                ALOGE("break");
+                rfkill_id = id;
+                break;
+            }
+            else if (sz == -1)
+            {
+                ALOGE("init_rfkill : open(%s) failed: %s (%d)\n", \
+                     path, strerror(errno), errno);
+                return -1;
+            }
     }
 
     asprintf(&rfkill_state_path, "/sys/class/rfkill/rfkill%d/state", rfkill_id);
@@ -329,20 +339,20 @@ int upio_set_bluetooth_power(int on)
     {
         ALOGE("set_bluetooth_power : open(%s) for write failed: %s (%d)",
             rfkill_state_path, strerror(errno), errno);
-        return ret;
+        sz = amSystemWriteSetProperty(rfkill_state_path, &buffer, 1);
+        goto last;
+        //return ret;
     }
 
     sz = write(fd, &buffer, 1);
-
-    if (sz < 0) {
-        ALOGE("set_bluetooth_power : write(%s) failed: %s (%d)",
-            rfkill_state_path, strerror(errno),errno);
-    }
-    else
-        ret = 0;
-
     if (fd >= 0)
         close(fd);
+    last:   if (sz < 0) {
+                ALOGE("set_bluetooth_power : write(%s) failed: %s (%d)",
+                    rfkill_state_path, strerror(errno),errno);
+            }
+            else
+                ret = 0;
 
     return ret;
 }
