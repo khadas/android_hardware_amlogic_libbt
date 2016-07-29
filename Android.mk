@@ -11,15 +11,22 @@ LOCAL_SRC_FILES := \
         src/hardware.c \
         src/userial_vendor.c \
         src/upio.c \
-        src/conf.c
+        src/conf.c \
+        src/sysbridge.cpp
 
 LOCAL_C_INCLUDES += \
         $(LOCAL_PATH)/include \
-        $(BDROID_DIR)/hci/include
+        $(BDROID_DIR)/hci/include \
+        $(TOP)/vendor/amlogic/frameworks/services
 
 LOCAL_SHARED_LIBRARIES := \
         libcutils \
-        liblog
+        liblog \
+        libbinder \
+        libsystemcontrolservice \
+        libutils \
+        libdl
+LOCAL_CFLAGS += -DANDROID_PLATFORM_SDK_VERSION=$(PLATFORM_SDK_VERSION)  -DUSE_SYS_WRITE_SERVICE=1
 
 LOCAL_MODULE := libbt-vendor
 LOCAL_MODULE_TAGS := optional
