@@ -46,6 +46,7 @@
 #include "userial.h"
 #include "userial_vendor.h"
 #include "upio.h"
+#define BTM_SCO_CODEC_CVSD 0x0001
 
 /******************************************************************************
 **  Constants & Macros
@@ -1246,6 +1247,7 @@ void hw_lpm_set_wake_state(uint8_t wake_assert)
 ** Returns          None
 **
 *******************************************************************************/
+static int hw_set_SCO_codec(uint16_t codec);
 void hw_sco_config(void)
 {
     if (SCO_INTERFACE_I2S == sco_bus_interface)
@@ -1283,6 +1285,8 @@ void hw_sco_config(void)
      *  configuration till SCO/eSCO is being established;
      *  i.e. in hw_set_audio_state() call.
      */
+
+    hw_set_SCO_codec(BTM_SCO_CODEC_CVSD);
 
     if (bt_vendor_cbacks)
     {
@@ -1422,6 +1426,7 @@ static int hw_set_SCO_codec(uint16_t codec)
             /* Disable mSBC */
             *p++ = (SCO_CODEC_PARAM_SIZE); /* set the parameter size */
             UINT8_TO_STREAM(p,0); /* disable */
+            UINT16_TO_STREAM(p, codec);
 
             /* set the totall size of this packet */
             p_buf->len = HCI_CMD_PREAMBLE_SIZE + SCO_CODEC_PARAM_SIZE;
