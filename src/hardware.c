@@ -42,7 +42,11 @@
 #include <string.h>
 #include "bt_hci_bdroid.h"
 #include "bt_vendor_brcm.h"
+#ifdef O_AMLOGIC
+#include "esco_parameters.h"
+#else
 #include "hci_audio.h"
+#endif
 #include "userial.h"
 #include "userial_vendor.h"
 #include "upio.h"
