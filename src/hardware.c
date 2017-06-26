@@ -1497,9 +1497,11 @@ int hw_set_audio_state(bt_vendor_op_audio_state_t *p_state)
 *******************************************************************************/
 int hw_set_patch_file_path(char *p_conf_name, char *p_conf_value, int param)
 {
-
-    strcpy(fw_patchfile_path, p_conf_value);
-
+#ifdef O_AMLOGIC
+    strcpy(fw_patchfile_path, "/vendor/etc/bluetooth/");
+#else
+    strcpy(fw_patchfile_path, "/etc/bluetooth/");
+#endif
     return 0;
 }
 
